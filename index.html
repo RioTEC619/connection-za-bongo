@@ -188,12 +188,12 @@
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="text-muted small">Ingiza namba yako ya simu ya mtandao wowote nchini Tanzania. Ombi la USSD Push litatumwa kupitia API.</p>
+                        <p class="text-muted small">Ingiza namba yako ya simu ya mtandao wowote nchini Tanzania. Ombi la USSD Push litatumwa kupitia HarakaPay API.</p>
                         <div class="mb-3">
-                            <label class="form-label">Namba ya Simu (+255)</label>
+                            <label class="form-label">Namba ya Simu (+255 au 07...)</label>
                             <div class="input-group">
-                                <span class="input-group-text bg-dark text-light border-secondary">+255</span>
-                                <input type="tel" id="userPhone" class="form-control bg-dark text-light border-secondary" placeholder="712345678" maxlength="9">
+                                <span class="input-group-text bg-dark text-light border-secondary">TZ</span>
+                                <input type="tel" id="userPhone" class="form-control bg-dark text-light border-secondary" placeholder="0712345678" maxlength="13">
                             </div>
                         </div>
                         <div id="paymentStatusBox" class="alert alert-warning hidden">
@@ -340,7 +340,7 @@
 
             statusBox.classList.remove('hidden');
             submitBtn.disabled = true;
-            statusText.innerText = "Inatuma ombi la USSD Push kwenda +255" + phone + "...";
+            statusText.innerText = "Inatuma ombi la USSD Push kupitia HarakaPay kwenda " + phone + "...";
 
             try {
                 const res = await fetch('/api/initiate-payment', {
@@ -353,9 +353,9 @@
                 if (data.success) {
                     statusText.innerHTML = `Ombi limetumwa! <b>Weka PIN kwenye simu yako.</b> Inasubiri malipo...`;
                     
-                    const txnId = data.transactionId;
+                    const orderId = data.order_id;
                     const pollInterval = setInterval(async () => {
-                        const checkRes = await fetch(`/api/check-status/${txnId}`);
+                        const checkRes = await fetch(`/api/check-status/${orderId}`);
                         const checkData = await checkRes.json();
 
                         if (checkData.paid) {
