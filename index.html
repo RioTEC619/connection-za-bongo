@@ -248,7 +248,8 @@
 
         <!-- SECRET ADMIN PANEL -->
         <section id="secretAdminSection" class="hidden">
-            <h2 class="fw-bold mb-4 text-warning"><i class="fa-solid fa-user-shield me-2"></i>Secret Admin Panel</h2>
+            <h2 class="fw-bold mb-4 text-warning"><i class="fa-solid fa-user-shield me-2"></i>Secret Admin Panel & Analytics</h2>
+            
             <div id="adminLoginBox" class="card card-custom p-4 max-w-md mx-auto" style="max-width: 400px;">
                 <h4 class="text-center mb-3">Admin Login</h4>
                 <input type="password" id="adminPasskey" class="form-control bg-dark text-light border-secondary mb-3" placeholder="Enter Secret Passkey">
@@ -256,6 +257,43 @@
             </div>
 
             <div id="adminControls" class="hidden">
+                <!-- Analytics Cards -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="card card-custom p-3 border-success">
+                            <small class="text-muted">Jumla ya Mapato (Total Income)</small>
+                            <h3 class="fw-bold text-success mt-1" id="adminTotalIncome">TZS 0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card card-custom p-3 border-info">
+                            <small class="text-muted">Jumla ya Watumiaji (Total Users)</small>
+                            <h3 class="fw-bold text-info mt-1" id="adminTotalUsers">0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transactions Table -->
+                <div class="card card-custom p-4 mb-4">
+                    <h5 class="fw-bold mb-3 text-light"><i class="fa-solid fa-list-check me-2"></i>Orodha ya Malipo ya Watumiaji</h5>
+                    <div class="table-responsive">
+                        <table class="table table-dark table-striped table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Namba ya Simu</th>
+                                    <th>Kifurushi</th>
+                                    <th>Kiasi (TZS)</th>
+                                    <th>Hali (Status)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminTransactionsBody">
+                                <tr><td colspan="4" class="text-center text-muted">Inapakia taarifa...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Settings Controls -->
                 <div class="card card-custom p-4 mb-4">
                     <h4 class="fw-bold text-danger mb-3">Badilisha Link Za WhatsApp Groups</h4>
                     <div class="mb-3">
@@ -409,11 +447,38 @@
             showSection('secretAdminSection');
         };
 
-        window.loginAdmin = function() {
+        window.loginAdmin = async function() {
             const key = document.getElementById('adminPasskey').value;
             if (key === 'ADMIN2026') {
                 document.getElementById('adminLoginBox').classList.add('hidden');
                 document.getElementById('adminControls').classList.remove('hidden');
+                
+                // Fetch and populate live analytics data
+                try {
+                    const res = await fetch('/api/admin-analytics');
+                    const data = await res.json();
+                    if (data.success) {
+                        document.getElementById('adminTotalIncome').innerText = "TZS " + data.totalIncome.toLocaleString();
+                        document.getElementById('adminTotalUsers').innerText = data.totalUsers;
+
+                        const tbody = document.getElementById('adminTransactionsBody');
+                        if (data.transactions.length === 0) {
+                            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Hakuna malipo yaliyofanyika bado.</td></tr>`;
+                        } else {
+                            tbody.innerHTML = data.transactions.map(t => `
+                                <tr>
+                                    <td>${t.phone}</td>
+                                    <td>${t.plan}</td>
+                                    <td>TZS ${t.amount.toLocaleString()}</td>
+                                    <td><span class="badge bg-${t.status === 'completed' ? 'success' : 'warning'}">${t.status}</span></td>
+                                </tr>
+                            `).join('');
+                        }
+                    }
+                } catch(e) {
+                    console.error("Failed to load admin analytics", e);
+                }
+
             } else {
                 alert('Passkey sio sahihi!');
             }
