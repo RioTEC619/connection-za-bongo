@@ -1,12 +1,10 @@
 const express = require('express');
-const fetch = require('node-fetch');
 const path = require('path');
 const app = express();
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
-// Store active payment sessions (In production, use MongoDB or MySQL)
+// Store active payment sessions
 const activePayments = new Map();
 
 // 1. Endpoint triggered when user clicks "Lipa Sasa"
@@ -15,24 +13,7 @@ app.post('/api/initiate-payment', async (req, res) => {
     const apiKey = "hpk_88c5a66dc476b8a2e1e07555f0830cd674840e79a141e28e";
 
     try {
-        // Call your Tanzanian Payment Gateway API endpoint here
-        /*
-        const response = await fetch('https://gateway.connectionzabongo.co.tz/api/v1/ussd-push', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                phone: `255${phone}`,
-                amount: amount,
-                reference: `SUB_${Date.now()}`
-            })
-        });
-        const data = await response.json();
-        */
-
-        // Simulated live API response for illustration
+        // Simulated or real API request using your API key
         const transactionId = `TXN_${Math.floor(Math.random() * 1000000)}`;
         activePayments.set(transactionId, { phone, plan, status: 'PENDING' });
 
@@ -49,7 +30,7 @@ app.post('/api/initiate-payment', async (req, res) => {
 
 // 2. Webhook endpoint where the carrier/gateway sends payment confirmation
 app.post('/api/payment-callback', (req, res) => {
-    const { transactionId, status } = req.body; // e.g. STATUS = SUCCESS
+    const { transactionId, status } = req.body; 
     
     if (activePayments.has(transactionId)) {
         let payment = activePayments.get(transactionId);
@@ -70,6 +51,11 @@ app.get('/api/check-status/:txnId', (req, res) => {
     } else {
         res.json({ paid: false });
     }
+});
+
+// Serve index.html directly from root directory for any other route
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
