@@ -7,7 +7,10 @@ app.use(express.json());
 const HARAKAPAY_API_KEY = "hpk_88c5a66dc476b8a2e1e07555f0830cd674840e79a141e28e";
 const HARAKAPAY_BASE_URL = "https://harakapay.net";
 
-// 1. Endpoint triggered when user clicks "Lipa Sasa" -> Calls HarakaPay API to send USSD Push
+// Store all platform transactions & users in memory
+const activePayments = new Map();
+
+// 1. Endpoint triggered when user initiates payment -> Calls HarakaPay API
 app.post('/api/initiate-payment', async (req, res) => {
     const { phone, plan, amount } = req.body;
 
@@ -16,7 +19,6 @@ app.post('/api/initiate-payment', async (req, res) => {
     }
 
     try {
-        // Call HarakaPay live API endpoint
         const response = await fetch(`${HARAKAPAY_BASE_URL}/api/v1/collect`, {
             method: 'POST',
             headers: {
@@ -24,7 +26,7 @@ app.post('/api/initiate-payment', async (req, res) => {
                 'X-API-Key': HARAKAPAY_API_KEY
             },
             body: JSON.stringify({
-                phone: phone, // e.g. 0712345678 or 255712345678
+                phone: phone,
                 amount: amount,
                 description: `Connection Za Bongo - Kifurushi cha ${plan}`
             })
@@ -33,6 +35,16 @@ app.post('/api/initiate-payment', async (req, res) => {
         const data = await response.json();
 
         if (data.success) {
+            // Track transaction for admin metrics
+            activePayments.set(data.order_id, {
+                orderId: data.order_id,
+                phone: phone,
+                plan: plan,
+                amount: Number(amount),
+                status: 'pending',
+                date: new Date().toISOString()
+            });
+
             res.json({ 
                 success: true, 
                 message: "USSD push imetumwa kwenye simu yako.", 
@@ -51,22 +63,27 @@ app.post('/api/initiate-payment', async (req, res) => {
     }
 });
 
-// 2. Status check endpoint for frontend polling (Checks HarakaPay API)
+// 2. Status check endpoint for frontend polling
 app.get('/api/check-status/:orderId', async (req, res) => {
     const orderId = req.params.orderId;
 
     try {
         const response = await fetch(`${HARAKAPAY_BASE_URL}/api/v1/status/${orderId}`, {
             method: 'GET',
-            headers: {
-                'X-API-Key': HARAKAPAY_API_KEY
-            }
+            headers: { 'X-API-Key': HARAKAPAY_API_KEY }
         });
 
         const data = await response.json();
 
         if (data.success && data.payment) {
             const paymentStatus = data.payment.status; // 'completed', 'failed', or 'pending'
+            
+            if (activePayments.has(orderId)) {
+                let txn = activePayments.get(orderId);
+                txn.status = paymentStatus;
+                activePayments.set(orderId, txn);
+            }
+
             if (paymentStatus === 'completed') {
                 return res.json({ paid: true });
             }
@@ -79,15 +96,28 @@ app.get('/api/check-status/:orderId', async (req, res) => {
     }
 });
 
-// 3. Webhook endpoint where HarakaPay automatically notifies your server on completion
-app.post('/api/payment-webhook', (req, res) => {
-    const { order_id, status } = req.body;
-    console.log(`Webhook received for Order ${order_id}: Status -> ${status}`);
-    // You can handle background database updates here if needed
-    res.json({ received: true });
+// 3. Admin Analytics Endpoint (Returns Total Income and Users)
+app.get('/api/admin-analytics', (req, res) => {
+    let totalIncome = 0;
+    let totalUsers = activePayments.size;
+    let transactionsList = [];
+
+    activePayments.forEach((txn) => {
+        transactionsList.push(txn);
+        if (txn.status === 'completed') {
+            totalIncome += txn.amount;
+        }
+    });
+
+    res.json({
+        success: true,
+        totalIncome,
+        totalUsers,
+        transactions: transactionsList
+    });
 });
 
-// Serve index.html directly from root directory for any other route
+// Serve index.html from root directory
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
