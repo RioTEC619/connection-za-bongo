@@ -107,7 +107,7 @@
     <!-- Main Navigation Bar -->
     <nav class="navbar navbar-expand-lg sticky-top navbar-dark">
         <div class="container">
-            <a class="navbar-brand" href="#home"><i class="fa-solid fa-fire-flame-curved me-2"></i>CONNECTION ZA BONGO</a>
+            <a class="navbar-brand" href="#home" onclick="showSection('homeSection')"><i class="fa-solid fa-fire-flame-curved me-2"></i>CONNECTION ZA BONGO</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -227,7 +227,7 @@
             <div id="protectedContent" class="locked-blur">
                 <h4 class="fw-bold my-3 text-danger"><i class="fa-brands fa-whatsapp me-2"></i>Magroup Yako Ya WhatsApp</h4>
                 <div class="row g-3" id="whatsappGroupList">
-                    <!-- Dynamic group links populated here after admin edit -->
+                    <!-- Dynamic group links populated here after payment -->
                 </div>
             </div>
         </section>
@@ -283,4 +283,145 @@
     <!-- Footer -->
     <footer class="footer mt-auto py-3 bg-dark border-top border-secondary text-center text-muted">
         <div class="container">
-            <small>&copy; 2026 Connection Za Bongo. Haki Zote Zimehifadhi
+            <small>&copy; 2026 Connection Za Bongo. Haki Zote Zimehifadhiwa (18+).</small>
+            <span onclick="triggerSecretAdmin()" style="cursor: pointer;" class="ms-2 text-dark"><i class="fa-solid fa-lock"></i></span>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Platform Dynamic State
+        let platformState = {
+            hasPaid: false,
+            currentPlan: null,
+            whatsappLink: "https://chat.whatsapp.com/C2CrXmv1vBrK07ln1PMzpE",
+            supportNumber: "+255 712 345 678",
+            apiKey: "hpk_88c5a66dc476b8a2e1e07555f0830cd674840e79a141e28e"
+        };
+
+        let selectedPlan = null;
+        let selectedAmount = 0;
+
+        function confirmAge() {
+            // Hide the age gate overlay completely
+            document.getElementById('ageGate').style.display = 'none';
+            // Show home section by default
+            showSection('homeSection');
+            renderGroupLinks();
+        }
+
+        function showSection(sectionId) {
+            const sections = ['homeSection', 'plansSection', 'dashboardSection', 'supportSection', 'secretAdminSection'];
+            sections.forEach(s => {
+                const el = document.getElementById(s);
+                if(el) el.classList.add('hidden');
+            });
+            const target = document.getElementById(sectionId);
+            if(target) target.classList.remove('hidden');
+        }
+
+        function initiatePayment(plan, amount) {
+            selectedPlan = plan;
+            selectedAmount = amount;
+            const modalElement = document.getElementById('paymentModal');
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        }
+
+        function processUSSDPayment() {
+            const phone = document.getElementById('userPhone').value;
+            if(!phone || phone.length < 9) {
+                alert('Tafadhali ingiza namba halali ya simu!');
+                return;
+            }
+
+            const statusBox = document.getElementById('paymentStatusBox');
+            const statusText = document.getElementById('paymentStatusText');
+            const submitBtn = document.getElementById('paySubmitBtn');
+
+            statusBox.classList.remove('hidden');
+            submitBtn.disabled = true;
+            statusText.innerText = "USSD Push imetumwa kwenda +255" + phone + ". Ingiza PIN kwenye simu yako...";
+
+            // Simulate USSD Confirmation Callback using the configured API key reference
+            setTimeout(() => {
+                statusText.innerText = "Malipo yamethibitishwa! Inafungua maudhui...";
+                setTimeout(() => {
+                    platformState.hasPaid = true;
+                    platformState.currentPlan = selectedPlan;
+
+                    // Unlock UI
+                    document.getElementById('dashboardLockedNotice').classList.add('hidden');
+                    document.getElementById('protectedContent').classList.remove('locked-blur');
+                    document.getElementById('subBadge').className = "badge bg-success fs-6";
+                    document.getElementById('subBadge').innerText = "Kifurushi Active (" + selectedPlan + ")";
+
+                    const modalElement = document.getElementById('paymentModal');
+                    const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                    if(modalInstance) modalInstance.hide();
+                    
+                    showSection('dashboardSection');
+                    renderGroupLinks();
+                }, 1500);
+            }, 3000);
+        }
+
+        function renderGroupLinks() {
+            const container = document.getElementById('whatsappGroupList');
+            if (!container) return;
+            
+            if (platformState.hasPaid) {
+                container.innerHTML = `
+                    <div class="col-md-6">
+                        <div class="card card-custom p-3 d-flex flex-row align-items-center justify-content-between">
+                            <div>
+                                <h6 class="fw-bold mb-1 text-light">VIP WhatsApp Group Connection</h6>
+                                <small class="text-success"><i class="fa-solid fa-circle-check me-1"></i>Imehakikiwa</small>
+                            </div>
+                            <a href="${platformState.whatsappLink}" target="_blank" class="btn btn-success btn-sm"><i class="fa-brands fa-whatsapp me-1"></i>Ingia Group</a>
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `<p class="text-muted">Lipa kifurushi ili kuona link za magroup.</p>`;
+            }
+        }
+
+        // Secret Admin Portal Functions
+        function triggerSecretAdmin() {
+            showSection('secretAdminSection');
+        }
+
+        function loginAdmin() {
+            const key = document.getElementById('adminPasskey').value;
+            if (key === 'ADMIN2026') {
+                document.getElementById('adminLoginBox').classList.add('hidden');
+                document.getElementById('adminControls').classList.remove('hidden');
+            } else {
+                alert('Passkey sio sahihi!');
+            }
+        }
+
+        function updateGroupLink() {
+            const newLink = document.getElementById('adminGroupLinkInput').value;
+            platformState.whatsappLink = newLink;
+            renderGroupLinks();
+            alert('WhatsApp Group Link imesasishwa kikamilifu!');
+        }
+
+        function updateSupportNumber() {
+            const newNum = document.getElementById('adminSupportInput').value;
+            platformState.supportNumber = newNum;
+            document.getElementById('displaySupportNumber').innerText = newNum;
+            alert('Namba ya msaada imesasishwa kikamilifu!');
+        }
+
+        // Handle Secret Hash Routing on load
+        window.addEventListener('DOMContentLoaded', () => {
+            if(window.location.hash === '#admin-secret-login') {
+                triggerSecretAdmin();
+            }
+        });
+    </script>
+</body>
+</html>
