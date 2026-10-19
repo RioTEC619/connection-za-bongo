@@ -304,7 +304,11 @@
 
         function confirmAge() {
             // Hide the age gate overlay completely
-            document.getElementById('ageGate').style.display = 'none';
+            const ageGate = document.getElementById('ageGate');
+            if(ageGate) {
+                ageGate.classList.add('hidden');
+                ageGate.style.display = 'none';
+            }
             // Show home section by default
             showSection('homeSection');
             renderGroupLinks();
@@ -343,7 +347,7 @@
             submitBtn.disabled = true;
             statusText.innerText = "USSD Push imetumwa kwenda +255" + phone + ". Ingiza PIN kwenye simu yako...";
 
-            // Simulate USSD Confirmation Callback using the configured API key reference
+            // Simulate USSD Confirmation Callback
             setTimeout(() => {
                 statusText.innerText = "Malipo yamethibitishwa! Inafungua maudhui...";
                 setTimeout(() => {
