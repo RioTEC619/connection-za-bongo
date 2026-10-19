@@ -13,9 +13,8 @@ app.post('/api/initiate-payment', async (req, res) => {
     const apiKey = "hpk_88c5a66dc476b8a2e1e07555f0830cd674840e79a141e28e";
 
     try {
-        // Simulated or real API request using your API key
         const transactionId = `TXN_${Math.floor(Math.random() * 1000000)}`;
-        activePayments.set(transactionId, { phone, plan, status: 'PENDING' });
+        activePayments.set(transactionId, { phone, plan, amount, status: 'PENDING' });
 
         res.json({ 
             success: true, 
@@ -39,6 +38,18 @@ app.post('/api/payment-callback', (req, res) => {
     }
     
     res.json({ received: true });
+});
+
+// 2.1 Admin shortcut endpoint to force-approve a pending transaction for testing
+app.post('/api/admin-trigger-success', (req, res) => {
+    const { transactionId } = req.body;
+    if (activePayments.has(transactionId)) {
+        let payment = activePayments.get(transactionId);
+        payment.status = 'SUCCESS';
+        activePayments.set(transactionId, payment);
+        return res.json({ success: true, message: "Transaction marked as SUCCESS." });
+    }
+    res.status(404).json({ success: false, message: "Transaction not found." });
 });
 
 // 3. Status check endpoint for frontend polling
